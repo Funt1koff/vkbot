@@ -1,8 +1,11 @@
 package com.funtikov.entity;
 
+import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(
@@ -10,13 +13,10 @@ import lombok.NoArgsConstructor;
         indexes = @Index(name = "users_vk_id_index", columnList = "vk_id")
 )
 @NoArgsConstructor
-@Data
-public class User {
+@Getter
+@Setter
+public class User extends PanacheEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_id_seq")
-    @SequenceGenerator(name = "users_id_seq", sequenceName = "users_id_seq", allocationSize = 1)
-    private Long id;
 
     @Column(name = "vk_id", unique = true, nullable = false, updatable = false)
     private Long vkId;

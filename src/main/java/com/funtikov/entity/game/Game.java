@@ -1,5 +1,6 @@
 package com.funtikov.entity.game;
 
+import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,14 +12,8 @@ import java.util.List;
 @Entity
 @Table(name = "games")
 @NoArgsConstructor
-@Data
 @ToString
-public class Game implements Serializable {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "games_id_seq")
-    @SequenceGenerator(name = "games_id_seq", sequenceName = "games_id_seq", allocationSize = 1)
-    private Long id;
+public class Game extends PanacheEntity implements Serializable {
 
     @Column(name = "bot_start_command", unique = true, nullable = false)
     private String botStartCommand;

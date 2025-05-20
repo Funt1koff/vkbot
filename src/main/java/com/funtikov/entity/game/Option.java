@@ -1,5 +1,6 @@
 package com.funtikov.entity.game;
 
+import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,14 +14,8 @@ import lombok.ToString;
                         name = "current_game_step_button_text_current_step_next_step_udx_constraint",
                         columnNames = {"current_game_step_id", "button_text", "next_game_step_id"}))
 @NoArgsConstructor
-@Data
 @ToString
-public class Option {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "option_id_seq")
-    @SequenceGenerator(name = "option_id_seq", sequenceName = "option_seq", allocationSize = 1)
-    private Long id;
+public class Option extends PanacheEntity {
 
     @ManyToOne
     @JoinColumn(name = "current_game_step_id", referencedColumnName = "id", nullable = false)

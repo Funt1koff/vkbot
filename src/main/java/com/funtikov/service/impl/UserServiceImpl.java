@@ -4,9 +4,7 @@ import com.funtikov.entity.User;
 import com.funtikov.exception.UserNotFoundException;
 import com.funtikov.repository.UserRepository;
 import com.funtikov.service.UserService;
-import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.TransactionScoped;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +17,24 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+
+    @Override
+    @Transactional
+    public User saveUser(User user) {
+        log.debug("Saving user with vkId '{}'", user.getVkId());
+        user.persistAndFlush();
+        return user;
+    }
+
+    @Override
+    @Transactional
+    public User saveUserByVkId(Long vkId) {
+        log.debug("Saving user with vkId '{}'", vkId);
+        User user = new User();
+        user.setVkId(vkId);
+        user.persistAndFlush();
+        return user;
+    }
 
     @Override
     @Transactional
