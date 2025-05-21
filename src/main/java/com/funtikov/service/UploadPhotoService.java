@@ -5,6 +5,7 @@ import java.util.List;
 
 public interface UploadPhotoService {
     List<String> uploadPhotos(List<String> photoUrls);
+
     List<String> uploadPhotoFromLocalFiles(List<Path> localFilePath);
 
 }

@@ -1,0 +1,183 @@
+<!-- src/main/resources/templates/game_details.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Детали игры</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom right, #E6F7FF, #B3DAF1);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2em auto;
+            background-color: #FFFFFF;
+            padding: 1.5em;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s forwards;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1, h2, h3 {
+            color: #003366;
+            margin-top: 0;
+        }
+
+        .top-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .steps {
+            margin-top: 1em;
+        }
+
+        .step {
+            margin-bottom: 1.5em;
+            padding: 1em;
+            border: 1px solid #B3DAF1;
+            border-radius: 6px;
+            transition: background 0.3s ease;
+        }
+
+        .step:hover {
+            background: #F0F8FF;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+            margin-bottom: 0.5em;
+        }
+
+        .step img {
+            max-width: 120px;
+            max-height: 120px;
+            border-radius: 4px;
+            border: 2px solid #B3DAF1;
+        }
+
+        .caption {
+            margin: 0.5em 0;
+        }
+
+        .options {
+            margin-top: 1em;
+            padding-left: 1.2em;
+        }
+
+        .option-item {
+            margin-bottom: 0.5em;
+        }
+
+        .option-item span {
+            display: inline-block;
+            margin-right: 0.5em;
+        }
+
+        .final {
+            color: #FF4D4F;
+            font-weight: bold;
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 8px 12px;
+            background: #007ACC;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .btn-back:hover {
+            background: #005EA8;
+        }
+
+        .btn-delete {
+            background: #FF4D4F;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: background 0.3s ease;
+            margin-left: 1em;
+        }
+
+        .btn-delete:hover {
+            background: #D9363E;
+        }
+    </style>
+</head>
+<body>
+    {#include navbar /}
+
+{#if game}
+    <div class="container">
+        <div class="top-actions">
+            <h1>Детали игры</h1>
+            <a class="btn-delete"
+               href="/game/delete/{game.botStartCommand}"
+               onclick="return confirm('Вы действительно хотите удалить эту игру?');">
+                Удалить игру
+            </a>
+        </div>
+
+        <h2>Команда: {game.botStartCommand}</h2>
+
+        <div class="steps">
+            <h3>Шаги игры</h3>
+            {#for step in game.gameSteps}
+                <div class="step">
+                    <div class="step-header">
+                        <h4>Шаг № {step.stepOrder}</h4>
+                        {#if step.imageUrl}
+                            <img src="{step.imageUrl}" alt="step image"/>
+                        {/if}
+                    </div>
+                    <p class="caption">{step.caption}</p>
+                    <div class="options">
+                        <strong>Опции:</strong>
+                        <ul>
+                            {#for opt in step.options}
+                                <li class="option-item">
+                                    <span>{opt.buttonText}</span>
+                                    {#if opt.finalOption}
+                                        <span class="final">(финальная)</span>
+                                    {/if}
+                                    {#if opt.nextStep}
+                                        <span>→ Шаг {opt.nextStep.stepOrder}</span>
+                                    {/if}
+                                </li>
+                            {/for}
+                        </ul>
+                    </div>
+                </div>
+            {/for}
+        </div>
+
+        <a class="btn-back" href="/game/all">Назад к списку игр</a>
+    </div>
+{/if}
+</body>
+</html>

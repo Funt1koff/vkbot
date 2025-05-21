@@ -9,6 +9,7 @@ import com.vk.api.sdk.objects.photos.responses.GetMessagesUploadServerResponse;
 import com.vk.api.sdk.objects.photos.responses.PhotoUploadResponse;
 import com.vk.api.sdk.objects.photos.responses.SaveMessagesPhotoResponse;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.HttpClient;
@@ -28,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
-@RequiredArgsConstructor
 @Slf4j
 public class UploadPhotoServiceImpl implements UploadPhotoService {
 
@@ -36,6 +36,21 @@ public class UploadPhotoServiceImpl implements UploadPhotoService {
     private final GroupActor groupActor;
     private final HttpClient httpClient;
     private final UploadPhotoResponseHandler uploadPhotoResponseHandler;
+
+    @Inject
+    public UploadPhotoServiceImpl(VkApiClient vkApiClient,
+                                  GroupActor groupActor,
+                                  HttpClient httpClient,
+                                  UploadPhotoResponseHandler uploadPhotoResponseHandler) {
+        this.vkApiClient = vkApiClient;
+        this.groupActor = groupActor;
+        this.httpClient = httpClient;
+        this.uploadPhotoResponseHandler = uploadPhotoResponseHandler;
+    }
+
+    public UploadPhotoServiceImpl() {
+        this(null, null, null, null);
+    }
 
     /**
      * Загрузка фотографий по URL.

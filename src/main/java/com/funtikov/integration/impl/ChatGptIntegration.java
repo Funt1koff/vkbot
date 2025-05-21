@@ -5,15 +5,23 @@ import com.funtikov.exception.IntegrationException;
 import com.funtikov.gpt.ChatGptClient;
 import com.funtikov.integration.IntegrationGateway;
 import jakarta.enterprise.context.ApplicationScoped;
-import lombok.RequiredArgsConstructor;
+import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 
 @ApplicationScoped
-@RequiredArgsConstructor
 @Slf4j
 public class ChatGptIntegration implements IntegrationGateway<GptPromptTask, String> {
 
     private final ChatGptClient client;
+
+    @Inject
+    public ChatGptIntegration(ChatGptClient client) {
+        this.client = client;
+    }
+
+    public ChatGptIntegration() {
+        this(null);
+    }
 
     @Override
     public String sendMessage(GptPromptTask message) throws IntegrationException {

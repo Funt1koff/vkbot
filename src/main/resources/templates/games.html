@@ -1,0 +1,136 @@
+<!-- src/main/resources/templates/game_list.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Список игр</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom right, #E6F7FF, #B3DAF1);
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 1em;
+            color: #003366;
+        }
+
+        .btn-create-container {
+            text-align: center;
+            margin-bottom: 1em;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            background: #007ACC;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #005EA8;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5em;
+            padding: 1em;
+        }
+
+        .card {
+            background-color: #FFFFFF;
+            width: 300px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+            cursor: pointer;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            background: #B3DAF1;
+            padding: 10px;
+            font-weight: bold;
+            color: #003366;
+        }
+
+        .card-body {
+            padding: 10px;
+            color: #333;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1em;
+        }
+
+        .delete {
+            background: #FF4D4F;
+        }
+
+        .delete:hover {
+            background: #D9363E;
+        }
+    </style>
+</head>
+<body>
+    {#include navbar /}
+
+<h1>Список всех игр</h1>
+
+<div class="btn-create-container">
+    <a class="btn" href="/game/save">Создать игру</a>
+</div>
+
+<div class="container">
+    {#for game in games}
+        <div class="card">
+            <div class="card-header">
+                <span>{game.botStartCommand}</span>
+            </div>
+            <div class="card-body">
+                <p> ID игры: {game.id}</p>
+                <p> Кол-во шагов: {game.gameSteps.size()}</p>
+                <div class="btn-group">
+                    <a class="btn" href="/game/details/{game.id}">Подробнее</a>
+                    <a class="btn delete"
+                       href="/game/delete/{game.botStartCommand}"
+                       onclick="return confirm('Вы действительно хотите удалить игру?');">
+                        Удалить
+                    </a>
+                </div>
+            </div>
+        </div>
+    {/for}
+</div>
+</body>
+</html>

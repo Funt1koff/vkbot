@@ -24,7 +24,6 @@ import java.util.concurrent.FutureTask;
 
 @ApplicationScoped
 @Slf4j
-@RequiredArgsConstructor
 public class VkIntegrationGateway implements IntegrationGateway<VkMessageTask, Void> {
 
     private final VkApiClient vkApiClient;
@@ -32,8 +31,22 @@ public class VkIntegrationGateway implements IntegrationGateway<VkMessageTask, V
     private final GroupActor groupActor;
     private final UserService userService;
 
+    public VkIntegrationGateway(VkApiClient vkApiClient,
+                                UploadPhotoService uploadPhotoService,
+                                GroupActor groupActor,
+                                UserService userService) {
+        this.vkApiClient = vkApiClient;
+        this.uploadPhotoService = uploadPhotoService;
+        this.groupActor = groupActor;
+        this.userService = userService;
+    }
+
+    public VkIntegrationGateway() {
+        this(null, null, null, null);
+    }
+
     @Override
-    public Void sendMessage(VkMessageTask message) throws UserNotFoundException {
+    public Void sendMessage(VkMessageTask message)  {
         MessagesSendQueryWithUserIds messagesSendQueryWithUserIds = vkApiClient.messages().sendUserIds(groupActor);
         Long vkUserId = message.getReceivedMessage().getObject().getUserId();
 
@@ -41,7 +54,13 @@ public class VkIntegrationGateway implements IntegrationGateway<VkMessageTask, V
             vkUserId = message.getReceivedMessage().getObject().getMessage().getFromId();
         }
 
-        User user = userService.findByVkId(vkUserId);
+        User user = null;
+
+        try {
+            user = userService.findByVkId(vkUserId);
+        } catch (UserNotFoundException e) {
+            log.error("Error sending message to user", e);
+        }
         if (user == null) {
             log.info("New user {} has been subscribed to bot messages", vkUserId);
             userService.saveUserByVkId(vkUserId);

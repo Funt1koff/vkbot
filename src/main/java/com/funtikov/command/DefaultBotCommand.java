@@ -8,18 +8,30 @@ import com.funtikov.integration.IntegrationGateway;
 import com.funtikov.keyboard.KeyboardCreatorFactory;
 import com.vk.api.sdk.objects.messages.Keyboard;
 import jakarta.enterprise.context.ApplicationScoped;
-import lombok.RequiredArgsConstructor;
+import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.funtikov.command.UserCommandCollection.DEFAULT_COMMAND;
 
-@RequiredArgsConstructor
 @ApplicationScoped
 @Slf4j
 public class DefaultBotCommand implements BotCommand {
     protected final IntegrationGateway<VkMessageTask, Void> vkIntegrationGateway;
     protected final KeyboardCreatorFactory keyboardCreatorFactory;
     private final IntegrationGateway<GptPromptTask, String> chatGptIntegrationGateway;
+
+    @Inject
+    public DefaultBotCommand(IntegrationGateway<VkMessageTask, Void> vkIntegrationGateway,
+                             KeyboardCreatorFactory keyboardCreatorFactory,
+                             IntegrationGateway<GptPromptTask, String> chatGptIntegrationGateway) {
+        this.vkIntegrationGateway = vkIntegrationGateway;
+        this.keyboardCreatorFactory = keyboardCreatorFactory;
+        this.chatGptIntegrationGateway = chatGptIntegrationGateway;
+    }
+
+    public DefaultBotCommand() {
+        this(null, null, null);
+    }
 
     @Override
     public boolean support(String command) {

@@ -2,15 +2,26 @@ package com.funtikov.keyboard;
 
 import com.funtikov.command.UserCommandCollection;
 import com.funtikov.dto.callback.VkCallback;
+import io.quarkus.arc.All;
 import jakarta.enterprise.context.ApplicationScoped;
-import lombok.RequiredArgsConstructor;
+import jakarta.inject.Inject;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
-@RequiredArgsConstructor
 public class KeyboardCreatorFactory {
+
     private final List<KeyboardCreator> keyboardCreatorList;
+
+    @Inject
+    public KeyboardCreatorFactory(@All List<KeyboardCreator> keyboardCreatorList) {
+        this.keyboardCreatorList = keyboardCreatorList;
+    }
+
+    public KeyboardCreatorFactory() {
+        this.keyboardCreatorList = new ArrayList<>();
+    }
 
     public KeyboardCreator getKeyboardCreator(VkCallback callback) {
         UserCommandCollection userCommand = UserCommandCollection

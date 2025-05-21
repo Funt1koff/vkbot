@@ -2,9 +2,7 @@ package com.funtikov.entity.game;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import java.util.List;
 
@@ -12,6 +10,8 @@ import java.util.List;
 @Table(name = "game_step")
 @NoArgsConstructor
 @ToString
+@Getter
+@Setter
 public class GameStep extends PanacheEntity {
 
     @ManyToOne

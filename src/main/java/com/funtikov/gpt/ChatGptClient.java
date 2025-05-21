@@ -5,6 +5,7 @@ import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.*;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
@@ -12,7 +13,6 @@ import java.util.List;
 import java.util.concurrent.*;
 
 @ApplicationScoped
-@RequiredArgsConstructor
 public class ChatGptClient {
 
     private final ConcurrentHashMap<Long, List<ChatCompletionMessageParam>> chatCompletionMessages = new ConcurrentHashMap<>();
@@ -23,6 +23,15 @@ public class ChatGptClient {
 
     private static final int MAX_MESSAGES = 10;
     private static final long CLEANUP_DELAY_MINUTES = 1;
+
+    @Inject
+    public ChatGptClient(OpenAIClient openAIClient) {
+        this.openAIClient = openAIClient;
+    }
+
+    public ChatGptClient() {
+        this(null);
+    }
 
     public String getResponse(Long userId, String prompt) {
         if (!chatCompletionMessages.containsKey(userId)) {

@@ -12,11 +12,11 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import static com.openai.core.ClientOptions.PRODUCTION_URL;
 
 @ApplicationScoped
-public class OpenApiConfig {
+public class OpenAiConfig {
 
     private final String apiKey;
 
-    public OpenApiConfig(@ConfigProperty(name = "openai.apikey") String apiKey) {
+    public OpenAiConfig(@ConfigProperty(name = "openai.apikey") String apiKey) {
         this.apiKey = apiKey;
     }
 

@@ -20,4 +20,24 @@ public class Game extends PanacheEntity implements Serializable {
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "game")
     private List<GameStep> gameSteps;
+
+    public String getBotStartCommand() {
+        return botStartCommand;
+    }
+
+    public void setBotStartCommand(String botStartCommand) {
+        this.botStartCommand = botStartCommand;
+    }
+
+    public List<GameStep> getGameSteps() {
+        return gameSteps;
+    }
+
+    public void setGameSteps(List<GameStep> gameSteps) {
+        this.gameSteps = gameSteps;
+    }
+
+    public Long getId() {
+        return id;
+    }
 }

@@ -1,0 +1,27 @@
+<!-- src/main/resources/templates/mailing_result.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Результат рассылки</title>
+    <style>
+        /* (ваши стили без изменений) */
+    </style>
+</head>
+<body>
+    {#include navbar /}
+
+<div class="container">
+    <h1>Результат рассылки</h1>
+
+    {#if successMessage}
+        <div class="message success">{successMessage}</div>
+    {/if}
+    {#if errorMessage}
+        <div class="message error">{errorMessage}</div>
+    {/if}
+
+    <a href="/mailing" class="btn">Вернуться к форме</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: 'postgres:17'
+    container_name: bot-db
+    environment:
+      - 'POSTGRES_DB=bot'
+      - 'POSTGRES_PASSWORD=abuser'
+      - 'POSTGRES_USER=abuser'
+    ports:
+      - '5432:5432'

@@ -2,9 +2,7 @@ package com.funtikov.entity.game;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 @Entity
 @Table(
@@ -15,6 +13,8 @@ import lombok.ToString;
                         columnNames = {"current_game_step_id", "button_text", "next_game_step_id"}))
 @NoArgsConstructor
 @ToString
+@Getter
+@Setter
 public class Option extends PanacheEntity {
 
     @ManyToOne
@@ -33,4 +33,7 @@ public class Option extends PanacheEntity {
     @ToString.Exclude
     private GameStep nextStep;
 
+    public Long getId() {
+        return id;
+    }
 }
