@@ -31,6 +31,7 @@ public class VkCallbackService implements CallbackService {
     @Override
     public void processCallback(VkCallback callback) {
         executorService.submit(() -> {
+            log.debug("Callback processed task received with body: {}", callback);
             eventDispatcher.dispatch(callback);
         });
     }

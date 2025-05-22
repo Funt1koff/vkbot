@@ -98,10 +98,6 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-qute</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-flyway</artifactId>
         </dependency>
         <dependency>
@@ -110,7 +106,7 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-rest-qute</artifactId>
+            <artifactId>quarkus-rest-jackson</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>

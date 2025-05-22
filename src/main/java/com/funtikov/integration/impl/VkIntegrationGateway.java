@@ -14,6 +14,7 @@ import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.messages.Keyboard;
 import com.vk.api.sdk.queries.messages.MessagesSendQueryWithUserIds;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,6 +32,7 @@ public class VkIntegrationGateway implements IntegrationGateway<VkMessageTask, V
     private final GroupActor groupActor;
     private final UserService userService;
 
+    @Inject
     public VkIntegrationGateway(VkApiClient vkApiClient,
                                 UploadPhotoService uploadPhotoService,
                                 GroupActor groupActor,

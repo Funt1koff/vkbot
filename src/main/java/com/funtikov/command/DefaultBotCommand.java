@@ -58,7 +58,7 @@ public class DefaultBotCommand implements BotCommand {
 
             vkIntegrationGateway.sendMessage(messageTask);
         } catch (Exception e) {
-            log.error(e.getMessage());
+            log.error("Error while sending message", e);
             defaultPayload(callback, keyboard);
         }
     }
