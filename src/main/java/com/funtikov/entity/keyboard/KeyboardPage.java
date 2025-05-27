@@ -1,14 +1,17 @@
 package com.funtikov.entity.keyboard;
 
 import com.funtikov.entity.AuditableEntity;
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
 @Entity
 @Table(name = "keyboard_pages")
+@Getter
+@Setter
 public class KeyboardPage extends AuditableEntity {
 
     @Column(name = "is_start_page", nullable = false)

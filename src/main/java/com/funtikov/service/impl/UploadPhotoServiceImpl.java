@@ -135,13 +135,13 @@ public class UploadPhotoServiceImpl implements UploadPhotoService {
 
         try (Response response = okHttpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                log.error("Не удалось скачать файл, HTTP код: {}", response.code());
+                log.error("Attempt to download file ned with error, HTTP code: {}", response.code());
                 return null;
             }
             ResponseBody body = response.body();
 
             if (body == null) {
-                log.error("Ответ не содержит тело");
+                log.error("Response with empty body");
                 return null;
             }
 

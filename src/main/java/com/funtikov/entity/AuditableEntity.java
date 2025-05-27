@@ -19,4 +19,11 @@ public abstract class AuditableEntity extends PanacheEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 }

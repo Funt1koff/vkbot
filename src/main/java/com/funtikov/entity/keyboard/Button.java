@@ -2,9 +2,13 @@ package com.funtikov.entity.keyboard;
 
 import com.funtikov.entity.AuditableEntity;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
-@Table(name = "buttons")
+@Table(name = "pageButtons")
+@Getter
+@Setter
 public class Button extends AuditableEntity {
 
     @Column(name = "command", nullable = false, unique = true)
