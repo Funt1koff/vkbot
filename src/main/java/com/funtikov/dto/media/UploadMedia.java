@@ -1,4 +1,4 @@
-package com.funtikov.dto.photo;
+package com.funtikov.dto.media;
 
 import lombok.Builder;
 import lombok.Getter;

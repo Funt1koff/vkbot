@@ -1,11 +1,9 @@
 package com.funtikov.service;
 
-import com.funtikov.dto.photo.UploadMediaResult;
+import com.funtikov.dto.media.UploadMediaResult;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 
 public interface UploadPhotoService {
 

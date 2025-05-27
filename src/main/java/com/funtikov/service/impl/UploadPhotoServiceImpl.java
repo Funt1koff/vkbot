@@ -1,10 +1,10 @@
 package com.funtikov.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.funtikov.dto.photo.UploadMedia;
-import com.funtikov.dto.photo.UploadMediaFailReason;
-import com.funtikov.dto.photo.UploadMediaResult;
-import com.funtikov.dto.photo.UploadStatus;
+import com.funtikov.dto.media.UploadMedia;
+import com.funtikov.dto.media.UploadMediaFailReason;
+import com.funtikov.dto.media.UploadMediaResult;
+import com.funtikov.dto.media.UploadStatus;
 import com.funtikov.exception.UploadPhotoException;
 import com.funtikov.service.UploadPhotoService;
 import com.vk.api.sdk.client.VkApiClient;

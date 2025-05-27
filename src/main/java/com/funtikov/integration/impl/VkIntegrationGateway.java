@@ -1,8 +1,8 @@
 package com.funtikov.integration.impl;
 
 import com.funtikov.dto.VkMessageTask;
-import com.funtikov.dto.photo.UploadMedia;
-import com.funtikov.dto.photo.UploadMediaResult;
+import com.funtikov.dto.media.UploadMedia;
+import com.funtikov.dto.media.UploadMediaResult;
 import com.funtikov.entity.User;
 import com.funtikov.exception.UserNotFoundException;
 import com.funtikov.integration.IntegrationGateway;
