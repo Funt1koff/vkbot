@@ -1,6 +1,11 @@
 package com.funtikov.service.impl;
 
-import com.funtikov.handler.UploadPhotoResponseHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.funtikov.dto.photo.UploadMedia;
+import com.funtikov.dto.photo.UploadMediaFailReason;
+import com.funtikov.dto.photo.UploadMediaResult;
+import com.funtikov.dto.photo.UploadStatus;
+import com.funtikov.exception.UploadPhotoException;
 import com.funtikov.service.UploadPhotoService;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.GroupActor;
@@ -10,189 +15,195 @@ import com.vk.api.sdk.objects.photos.responses.PhotoUploadResponse;
 import com.vk.api.sdk.objects.photos.responses.SaveMessagesPhotoResponse;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hc.client5.http.classic.HttpClient;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.HttpEntity;
+import okhttp3.*;
+import okio.BufferedSink;
+import okio.Okio;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 
 @ApplicationScoped
 @Slf4j
 public class UploadPhotoServiceImpl implements UploadPhotoService {
 
-    private final VkApiClient vkApiClient;
+    private static final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final OkHttpClient okHttpClient;
     private final GroupActor groupActor;
-    private final HttpClient httpClient;
-    private final UploadPhotoResponseHandler uploadPhotoResponseHandler;
+    private final VkApiClient vkApiClient;
 
     @Inject
-    public UploadPhotoServiceImpl(VkApiClient vkApiClient,
+    public UploadPhotoServiceImpl(OkHttpClient okHttpClient,
                                   GroupActor groupActor,
-                                  HttpClient httpClient,
-                                  UploadPhotoResponseHandler uploadPhotoResponseHandler) {
-        this.vkApiClient = vkApiClient;
+                                  VkApiClient vkApiClient) {
+        this.okHttpClient = okHttpClient;
         this.groupActor = groupActor;
-        this.httpClient = httpClient;
-        this.uploadPhotoResponseHandler = uploadPhotoResponseHandler;
+        this.vkApiClient = vkApiClient;
     }
 
     public UploadPhotoServiceImpl() {
-        this(null, null, null, null);
+        this(null,null,null);
     }
 
-    /**
-     * Загрузка фотографий по URL.
-     */
     @Override
-    public List<String> uploadPhotos(List<String> photoUrls) {
-        List<String> attachments = new ArrayList<>();
-        if (photoUrls == null || photoUrls.isEmpty()) {
-            return attachments;
-        }
+    public UploadMediaResult uploadPhotos(List<String> photoUrls) {
 
-        for (String photoUrl : photoUrls) {
-            if (photoUrl == null || photoUrl.trim().isEmpty()) {
-                continue;
-            }
+        List<Future<UploadMediaResult>> futures = photoUrls.stream()
+                .map(this::asyncUploadPhoto)
+                .toList();
 
-            File tempFile = null;
+        List<UploadMedia> allMedia = new ArrayList<>();
+        for (Future<UploadMediaResult> future : futures) {
             try {
-                // 1. Скачиваем в tempFile
-                tempFile = downloadFileFromUrl(photoUrl);
-                if (tempFile == null) {
-                    // Если не удалось скачать — пропускаем
-                    continue;
-                }
-
-                // 2. Загружаем во ВКонтакте и получаем attachment
-                String attachment = uploadSingleFile(tempFile);
-                if (attachment != null) {
-                    attachments.add(attachment);
-                }
-            } catch (Exception e) {
-                log.error("Ошибка при загрузке фото: {}", photoUrl, e);
-            } finally {
-                // 3. Удаляем временный файл
-                if (tempFile != null && tempFile.exists()) {
-                    boolean deleted = tempFile.delete();
-                    if (!deleted) {
-                        log.warn("Не удалось удалить временный файл: {}", tempFile);
-                    }
-                }
+                UploadMediaResult result = future.get();
+                allMedia.addAll(result.getMedia());
+            } catch (InterruptedException | ExecutionException e) {
+                throw new UploadPhotoException("Error in concurrent upload", e);
             }
         }
-        return attachments;
+        return UploadMediaResult.builder()
+                .media(allMedia)
+                .build();
     }
 
-    /**
-     * Загрузка фотографий из локальных файлов (Path).
-     */
     @Override
-    public List<String> uploadPhotoFromLocalFiles(List<Path> localFilePaths) {
-        List<String> attachments = new ArrayList<>();
-        if (localFilePaths == null || localFilePaths.isEmpty()) {
-            return attachments;
-        }
-
-        for (Path path : localFilePaths) {
-            if (path == null) {
-                continue;
-            }
-            File file = path.toFile();
-            if (!file.exists() || !file.canRead()) {
-                log.warn("Файл не найден или не доступен для чтения: {}", path);
-                continue;
-            }
-
-            try {
-                // Загружаем файл во ВКонтакте
-                String attachment = uploadSingleFile(file);
-                if (attachment != null) {
-                    attachments.add(attachment);
-                }
-            } catch (Exception e) {
-                log.error("Ошибка при загрузке фото из локального файла: {}", path, e);
-            }
-        }
-        return attachments;
+    public Future<UploadMediaResult> asyncUploadPhoto(String photoUrl) {
+        return executor.submit(() -> uploadPhoto(photoUrl));
     }
 
-    /**
-     * Скачивает файл по URL во временный файл (возвращает File).
-     * В случае ошибки — возвращает null.
-     */
-    private File downloadFileFromUrl(String photoUrl) {
+    @Override
+    public UploadMediaResult uploadPhoto(String photoUrl) {
+        UploadMediaResult.UploadMediaResultBuilder builder = UploadMediaResult.builder();
+        UploadMedia.UploadMediaBuilder uploadMediaBuilder = UploadMedia.builder();
+        String attachment = null;
+        if (photoUrl == null || photoUrl.trim().isEmpty()) {
+            uploadMediaBuilder.url(photoUrl);
+            uploadMediaBuilder.attachment(attachment);
+            uploadMediaBuilder.status(UploadStatus.FAILED);
+            uploadMediaBuilder.failReason(UploadMediaFailReason.MEDIA_URL_EMPTY);
+
+            return builder.media(List.of(uploadMediaBuilder.build())).build();
+        }
+
+        File templFile = downloadFileFromUrl(photoUrl);
+
+        if (templFile == null) {
+            uploadMediaBuilder.url(photoUrl);
+            uploadMediaBuilder.attachment(attachment);
+            uploadMediaBuilder.status(UploadStatus.FAILED);
+            uploadMediaBuilder.failReason(UploadMediaFailReason.ERROR_DOWNLOAD_MEDIA);
+
+            return builder.media(List.of(uploadMediaBuilder.build())).build();
+        }
+
         try {
-            URL url = new URL(photoUrl);
-            File tempFile = File.createTempFile("vk_photo", ".jpg");
-            try (InputStream in = url.openStream();
-                 OutputStream out = new FileOutputStream(tempFile)) {
-
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, bytesRead);
-                }
-            }
-            return tempFile;
+            attachment = uploadPhotoToVkServer(templFile);
         } catch (Exception e) {
+            log.error("Error upload photo to vk server", e);
+            uploadMediaBuilder.url(photoUrl);
+            uploadMediaBuilder.attachment(attachment);
+            uploadMediaBuilder.status(UploadStatus.FAILED);
+            uploadMediaBuilder.failReason(UploadMediaFailReason.ERROR_UPLOAD_MEDIA);
+
+            return builder.media(List.of(uploadMediaBuilder.build())).build();
+        }
+
+        uploadMediaBuilder.url(photoUrl);
+        uploadMediaBuilder.attachment(attachment);
+        uploadMediaBuilder.status(UploadStatus.SUCCESS);
+        boolean deleteTempFile = templFile.delete();
+        if (!deleteTempFile) {
+            log.error("Error deleting temp file: {}", templFile.getAbsolutePath());
+        }
+        return builder.media(List.of(uploadMediaBuilder.build())).build();
+    }
+
+    private File downloadFileFromUrl(String photoUrl) {
+        Request request = new Request.Builder()
+                .url(photoUrl)
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                log.error("Не удалось скачать файл, HTTP код: {}", response.code());
+                return null;
+            }
+            ResponseBody body = response.body();
+
+            if (body == null) {
+                log.error("Ответ не содержит тело");
+                return null;
+            }
+
+            File tempFile = File.createTempFile("vk_photo", ".jpg");
+
+            try (BufferedSink sink = Okio.buffer(Okio.sink(tempFile))) {
+                sink.writeAll(body.source());
+            }
+
+            return tempFile;
+        } catch (IOException e) {
             log.error("Не удалось скачать файл по URL: {}", photoUrl, e);
             return null;
         }
     }
 
-    /**
-     * Загружает единичный файл на сервер ВКонтакте, возвращает attachment-строку или null в случае ошибки.
-     */
-    private String uploadSingleFile(File file) {
+    private String uploadPhotoToVkServer(File file) {
         try {
             // 1. Получаем Upload URL
             GetMessagesUploadServerResponse uploadServerResponse = vkApiClient.photos()
                     .getMessagesUploadServer(groupActor)
                     .execute();
-            URI uploadUrl = uploadServerResponse.getUploadUrl();
 
-            // 2. POST-запрос на сервер ВК
-            HttpPost httpPost = new HttpPost(uploadUrl);
-            HttpEntity entity = MultipartEntityBuilder.create()
-                    .addBinaryBody(
-                            "photo",                     // ключ формы
-                            file,
-                            ContentType.MULTIPART_FORM_DATA,
-                            file.getName()
-                    )
+            URI uploadUri = uploadServerResponse.getUploadUrl();
+
+            MediaType jpeg = MediaType.parse("image/jpeg");
+            RequestBody fileBody = RequestBody.create(file, jpeg);
+
+            RequestBody multipartBody = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("photo", file.getName(), fileBody)
                     .build();
-            httpPost.setEntity(entity);
 
-            // Ответ Vk при загрузке
-            PhotoUploadResponse uploadResponse = httpClient.execute(httpPost, uploadPhotoResponseHandler);
+            Request request = new Request.Builder()
+                    .url(uploadUri.toString())
+                    .post(multipartBody)
+                    .build();
 
-            // 3. Сохраняем фото на серверах ВК
-            List<SaveMessagesPhotoResponse> savedPhotos = vkApiClient.photos()
-                    .saveMessagesPhoto(groupActor)
-                    .server(uploadResponse.getServer())
-                    .photo(uploadResponse.getPhoto())
-                    .hash(uploadResponse.getHash())
-                    .execute();
+            // 3. Выполняем запрос и десериализуем ответ
+            try (Response response = okHttpClient.newCall(request).execute()) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    log.error("Не удалось загрузить файл, HTTP код: {}", response.code());
+                    return null;
+                }
+                String json = response.body().string();
+                PhotoUploadResponse uploadResponse =
+                        objectMapper.readValue(json, PhotoUploadResponse.class);
 
-            // 4. Формируем attachment-строку "photo{ownerId}_{photoId}"
-            if (savedPhotos != null && !savedPhotos.isEmpty()) {
-                Photo savedPhoto = savedPhotos.get(0);
-                return "photo" + savedPhoto.getOwnerId() + "_" + savedPhoto.getId();
+                // 4. Сохраняем фото на серверах ВК
+                List<SaveMessagesPhotoResponse> savedPhotos =
+                        vkApiClient.photos()
+                                .saveMessagesPhoto(groupActor)
+                                .server(uploadResponse.getServer())
+                                .photo(uploadResponse.getPhoto())
+                                .hash(uploadResponse.getHash())
+                                .execute();
+
+                if (savedPhotos != null && !savedPhotos.isEmpty()) {
+                    Photo p = savedPhotos.getFirst();
+                    return "photo" + p.getOwnerId() + "_" + p.getId();
+                }
             }
-
         } catch (Exception e) {
             log.error("Ошибка при загрузке файла: {}", file, e);
         }

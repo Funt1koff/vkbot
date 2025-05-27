@@ -1,6 +1,8 @@
 package com.funtikov.integration.impl;
 
 import com.funtikov.dto.VkMessageTask;
+import com.funtikov.dto.photo.UploadMedia;
+import com.funtikov.dto.photo.UploadMediaResult;
 import com.funtikov.entity.User;
 import com.funtikov.exception.UserNotFoundException;
 import com.funtikov.integration.IntegrationGateway;
@@ -15,7 +17,6 @@ import com.vk.api.sdk.objects.messages.Keyboard;
 import com.vk.api.sdk.queries.messages.MessagesSendQueryWithUserIds;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -68,7 +69,7 @@ public class VkIntegrationGateway implements IntegrationGateway<VkMessageTask, V
             userService.saveUserByVkId(vkUserId);
         }
 
-        FutureTask<List<String>> asyncUploadPhotoTask = null;
+        FutureTask<UploadMediaResult> asyncUploadPhotoTask = null;
 
         if (message.getPhotoUrls() != null && !message.getPhotoUrls().isEmpty()) {
             asyncUploadPhotoTask = new FutureTask<>(() -> uploadPhotoService.uploadPhotos(message.getPhotoUrls()));
@@ -94,7 +95,11 @@ public class VkIntegrationGateway implements IntegrationGateway<VkMessageTask, V
 
         if (asyncUploadPhotoTask != null) {
             try {
-                List<String> attachments = asyncUploadPhotoTask.get();
+                List<String> attachments = asyncUploadPhotoTask.get()
+                        .getSuccessUploadedMedia()
+                        .stream()
+                        .map(UploadMedia::getAttachment)
+                        .toList();
                 log.info("Successfully async uploaded photos for user: {}", vkUserId);
                 String attachmentAsString = String.join(", ", attachments);
                 messagesSendQueryWithUserIds.attachment(attachmentAsString);
