@@ -15,8 +15,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class User extends PanacheEntity {
-
+public class User extends AuditableEntity {
 
     @Column(name = "vk_id", unique = true, nullable = false, updatable = false)
     private Long vkId;

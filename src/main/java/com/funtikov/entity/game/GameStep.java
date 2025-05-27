@@ -1,5 +1,6 @@
 package com.funtikov.entity.game;
 
+import com.funtikov.entity.AuditableEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,7 +13,7 @@ import java.util.List;
 @ToString
 @Getter
 @Setter
-public class GameStep extends PanacheEntity {
+public class GameStep extends AuditableEntity {
 
     @ManyToOne
     @JoinColumn(name = "game_id", referencedColumnName = "id", nullable = false)
