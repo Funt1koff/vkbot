@@ -1,7 +1,6 @@
 package com.funtikov.entity.keyboard;
 
 import com.funtikov.entity.AuditableEntity;
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -25,6 +24,7 @@ public class ButtonResponse extends AuditableEntity {
             cascade = ALL,
             orphanRemoval = true)
     @Size(max = 10, message = "Max media capacity - 10")
+    @OrderBy(value = "orderIndex ASC")
     private List<Media> media;
 
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)

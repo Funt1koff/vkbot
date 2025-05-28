@@ -1,15 +1,19 @@
 package com.funtikov.entity.keyboard;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.funtikov.entity.AuditableEntity;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import static jakarta.persistence.FetchType.LAZY;
 
+
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "id"
+)
 @Entity
 @Table(name = "media")
 @Getter
@@ -22,5 +26,8 @@ public class Media extends AuditableEntity {
 
     private String url;
     private String attachment;
+
+    @Column(name = "order_index", nullable = false)
+    private Integer orderIndex = 0;
 
 }
