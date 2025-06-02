@@ -18,4 +18,11 @@ public class MediaRepositoryImpl implements MediaRepository {
 
         return find("url IN ?1", urls).list();
     }
+
+    public Media findByUrl(String url) {
+        if (url == null || url.isEmpty()) {
+            return null;
+        }
+        return find("url = ?1", url).firstResult();
+    }
 }

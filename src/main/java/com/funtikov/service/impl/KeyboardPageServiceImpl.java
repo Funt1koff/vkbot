@@ -4,6 +4,7 @@ import com.funtikov.dto.keyboard.ButtonDto;
 import com.funtikov.dto.keyboard.ButtonResponseDto;
 import com.funtikov.dto.keyboard.KeyboardPageDto;
 import com.funtikov.dto.keyboard.MediaDto;
+import com.funtikov.dto.keyboard.response.KeyboardPageRequestResponseDto;
 import com.funtikov.dto.media.UploadMedia;
 import com.funtikov.dto.media.UploadMediaResult;
 import com.funtikov.entity.keyboard.Button;
@@ -19,6 +20,7 @@ import com.funtikov.service.KeyboardPageService;
 import com.funtikov.service.UploadPhotoService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +54,14 @@ public class KeyboardPageServiceImpl implements KeyboardPageService {
 
     @Override
     @Transactional
-    public KeyboardPage save(KeyboardPageDto dto) {
+    public List<KeyboardPageRequestResponseDto> getAll() {
+        return keyboardMapper.toResponseDtoList(
+                keyboardPageRepository.findAll().stream().toList());
+    }
+
+    @Override
+    @Transactional
+    public KeyboardPageRequestResponseDto save(KeyboardPageDto dto) {
         // 1) Получаем или создаём страницу
         KeyboardPage page = dto.id() != null
                 ? keyboardPageRepository.findById(dto.id())
@@ -182,6 +191,55 @@ public class KeyboardPageServiceImpl implements KeyboardPageService {
 
         // 6) Сохраняем всё дерево
         keyboardPageRepository.persistAndFlush(page);
-        return page;
+        page.getPageButtons().forEach(button ->{
+            if(button.getNextKeyboardPage() == null) {
+                button.setNextKeyboardPage(button.getParentPage());
+            }
+        });
+        keyboardPageRepository.persistAndFlush(page);
+        return keyboardMapper.toResponseDto(page);
+    }
+
+    @Override
+    @Transactional
+    public KeyboardPageRequestResponseDto updateKeyboardPage(Long id, KeyboardPageDto dto) {
+
+        if (id == null) {
+           throw new IllegalArgumentException("Id for update keyboard page must be null");
+        }
+
+        KeyboardPage existing = keyboardPageRepository.findById(id);
+        if (existing == null) {
+            throw new NotFoundException("KeyboardPage with id=" + id + " not found");
+        }
+
+        KeyboardPageDto toSave = KeyboardPageDto.builder()
+                .id(id)
+                .startPage(dto.startPage())
+                .pageButtons(dto.pageButtons())
+                .build();
+
+
+        return save(toSave);
+    }
+
+    @Transactional
+    @Override
+    public KeyboardPageRequestResponseDto getKeyboardPage(Long id) {
+        KeyboardPage keyboardPage = keyboardPageRepository.findById(id);
+        if (keyboardPage == null) {
+            throw new NotFoundException("KeyboardPage with id=" + id + " not found");
+        }
+        return keyboardMapper.toResponseDto(keyboardPage);
+    }
+
+    @Transactional
+    @Override
+    public void deleteKeyboardPage(Long id) {
+        KeyboardPage existing = keyboardPageRepository.findById(id);
+        if (existing == null) {
+            throw new NotFoundException("KeyboardPage with id=" + id + " not found");
+        }
+        keyboardPageRepository.delete(existing);
     }
 }

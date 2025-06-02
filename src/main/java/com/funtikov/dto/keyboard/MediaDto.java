@@ -5,6 +5,7 @@ import lombok.Builder;
 
 @Builder
 public record MediaDto(
-        @NotBlank String url
+        @NotBlank String url,
+        int orderIndex
 ) {
 }

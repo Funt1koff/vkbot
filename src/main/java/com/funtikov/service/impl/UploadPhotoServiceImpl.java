@@ -13,6 +13,7 @@ import com.vk.api.sdk.objects.photos.Photo;
 import com.vk.api.sdk.objects.photos.responses.GetMessagesUploadServerResponse;
 import com.vk.api.sdk.objects.photos.responses.PhotoUploadResponse;
 import com.vk.api.sdk.objects.photos.responses.SaveMessagesPhotoResponse;
+import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,9 @@ public class UploadPhotoServiceImpl implements UploadPhotoService {
     private final VkApiClient vkApiClient;
 
     @Inject
+    UploadPhotoService self;
+
+    @Inject
     public UploadPhotoServiceImpl(OkHttpClient okHttpClient,
                                   GroupActor groupActor,
                                   VkApiClient vkApiClient) {
@@ -55,6 +59,7 @@ public class UploadPhotoServiceImpl implements UploadPhotoService {
     }
 
     @Override
+    @CacheResult(cacheName = "upload-photo")
     public UploadMediaResult uploadPhotos(List<String> photoUrls) {
 
         List<Future<UploadMediaResult>> futures = photoUrls.stream()
@@ -77,10 +82,11 @@ public class UploadPhotoServiceImpl implements UploadPhotoService {
 
     @Override
     public Future<UploadMediaResult> asyncUploadPhoto(String photoUrl) {
-        return executor.submit(() -> uploadPhoto(photoUrl));
+        return executor.submit(() -> self.uploadPhoto(photoUrl));
     }
 
     @Override
+    @CacheResult(cacheName = "upload-photo")
     public UploadMediaResult uploadPhoto(String photoUrl) {
         UploadMediaResult.UploadMediaResultBuilder builder = UploadMediaResult.builder();
         UploadMedia.UploadMediaBuilder uploadMediaBuilder = UploadMedia.builder();

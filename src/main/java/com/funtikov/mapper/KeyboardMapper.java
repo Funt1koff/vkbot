@@ -1,9 +1,15 @@
 package com.funtikov.mapper;
 
 import com.funtikov.dto.keyboard.*;
+import com.funtikov.dto.keyboard.response.ButtonRequestResponseDto;
+import com.funtikov.dto.keyboard.response.ButtonResponseRequestReponseDto;
+import com.funtikov.dto.keyboard.response.KeyboardPageRequestResponseDto;
+import com.funtikov.dto.keyboard.response.MediaResponseDto;
+import com.funtikov.entity.AuditableEntity;
 import com.funtikov.entity.keyboard.*;
 import org.mapstruct.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Mapper(
         componentModel = "cdi",
@@ -22,6 +28,20 @@ public interface KeyboardMapper {
 
     List<KeyboardPage> toEntity(List<KeyboardPageDto> dtoList);
 
+    default KeyboardPageRequestResponseDto toResponseDto(KeyboardPage entity) {
+        return KeyboardPageRequestResponseDto.builder()
+                .id(entity.getId())
+                .startPage(entity.isStartPage())
+                .pageButtonIds(entity.getPageButtons().stream().map(AuditableEntity::getId).collect(Collectors.toList()))
+                .build();
+    }
+
+    default List<KeyboardPageRequestResponseDto> toResponseDtoList(List<KeyboardPage> entities) {
+        return entities.stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+    }
+
 
     // ==== Button ====
 
@@ -35,6 +55,16 @@ public interface KeyboardMapper {
 
     List<Button> toEntityButtonList(List<ButtonDto> dtoList);
 
+    default ButtonRequestResponseDto toResponseDto(Button button) {
+        return ButtonRequestResponseDto.builder()
+                .id(button.getId())
+                .command(button.getCommand())
+                .buttonResponseId(button.getButtonResponse().getId())
+                .parentKeyboardPageId(button.getParentPage().getId())
+                .nextKeyboardPageId(button.getNextKeyboardPage() == null ? null : button.getNextKeyboardPage().getId())
+                .build();
+    }
+
 
     // ==== ButtonResponse ====
 
@@ -43,6 +73,14 @@ public interface KeyboardMapper {
     // поле media заполним руками (через UploadPhotoService), поэтому игнорируем
     @Mapping(target = "media",  ignore = true)
     ButtonResponse toEntity(ButtonResponseDto dto);
+
+    default ButtonResponseRequestReponseDto toButtonResponseDto(ButtonResponse buttonResponse) {
+        return ButtonResponseRequestReponseDto.builder()
+                .id(buttonResponse.getId())
+                .text(buttonResponse.getText())
+                .mediaIds(buttonResponse.getMedia().stream().map(Media::getId).collect(Collectors.toList()))
+                .build();
+    }
 
 
     // ==== Media ====
@@ -57,4 +95,19 @@ public interface KeyboardMapper {
     Media toEntity(MediaDto dto);
 
     List<Media> toEntityMediaList(List<MediaDto> dtoList);
+
+    default MediaResponseDto toMediaResponseDto(Media media) {
+        return MediaResponseDto.builder()
+                .id(media.getId())
+                .url(media.getUrl())
+                .orderIndex(media.getOrderIndex())
+                .currentButtonResponseId(media.getButtonResponse().getId())
+                .build();
+    }
+
+    default List<MediaResponseDto> toMediaResponseDtoList(List<Media> mediaList) {
+        return mediaList.stream()
+                .map(this::toMediaResponseDto)
+                .toList();
+    }
 }

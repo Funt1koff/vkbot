@@ -9,4 +9,6 @@ public interface MediaRepository extends PanacheRepository<Media> {
 
     List<Media> findByUrls(List<String> urls);
 
+    Media findByUrl(String url);
+
 }
