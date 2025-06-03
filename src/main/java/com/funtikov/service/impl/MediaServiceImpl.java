@@ -82,7 +82,7 @@ public class MediaServiceImpl implements MediaService {
     }
 
     @Transactional
-    public Media saveMedia(MediaDto mediaDto) {
+    public Media saveMedia(MediaDto mediaDto) throws MediaExistException {
 
         Media media = mediaMapper.toEntity(mediaDto);
 
@@ -101,8 +101,7 @@ public class MediaServiceImpl implements MediaService {
         ButtonResponse buttonResponse = media.getButtonResponse();
         int mediaListSize = buttonResponse.getMedia().size();
         media.setOrderIndex(mediaListSize);
-        media.persistAndFlush();
-        return media;
+        return saveMedia(media);
     }
 
 
