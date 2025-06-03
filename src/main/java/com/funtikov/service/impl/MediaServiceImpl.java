@@ -1,76 +1,201 @@
 package com.funtikov.service.impl;
 
-import com.funtikov.dto.keyboard.MediaDto;
-import com.funtikov.dto.keyboard.response.MediaResponseDto;
+import com.funtikov.dto.keyboard.IdReference;
+import com.funtikov.dto.keyboard.media.MediaDto;
+import com.funtikov.dto.media.UploadMedia;
+import com.funtikov.dto.media.UploadMediaResult;
+import com.funtikov.entity.keyboard.ButtonResponse;
 import com.funtikov.entity.keyboard.Media;
-import com.funtikov.exception.MediaNotFoundException;
-import com.funtikov.mapper.KeyboardMapper;
+import com.funtikov.exception.MediaExistException;
+import com.funtikov.mapper.Mapper;
+import com.funtikov.repository.ButtonResponseRepository;
 import com.funtikov.repository.MediaRepository;
 import com.funtikov.service.MediaService;
 import com.funtikov.service.UploadPhotoService;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
+@Slf4j
 public class MediaServiceImpl implements MediaService {
 
+    private static final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
+
     private final MediaRepository mediaRepository;
-    private final KeyboardMapper keyboardMapper;
+    private final Mapper<MediaDto, Media> mediaMapper;
     private final UploadPhotoService uploadPhotoService;
+    private final ButtonResponseRepository buttonResponseRepository;
 
-    @Inject
-    public MediaServiceImpl(MediaRepository mediaRepository, KeyboardMapper keyboardMapper, UploadPhotoService uploadPhotoService) {
+    public MediaServiceImpl(MediaRepository mediaRepository,
+                            Mapper<MediaDto, Media> mediaMapper,
+                            UploadPhotoService uploadPhotoService,
+                            ButtonResponseRepository buttonResponseRepository) {
         this.mediaRepository = mediaRepository;
-        this.keyboardMapper = keyboardMapper;
+        this.mediaMapper = mediaMapper;
         this.uploadPhotoService = uploadPhotoService;
+        this.buttonResponseRepository = buttonResponseRepository;
     }
 
-
-    @Override
     @Transactional
-    public List<MediaResponseDto> getAll() {
-        return keyboardMapper.toMediaResponseDtoList(mediaRepository.findAll().stream().toList());
-    }
+    public List<Media> saveMediaList(List<MediaDto> dtoList) {
+        List<String> urls = dtoList.stream()
+                .map(MediaDto::getUrl)
+                .toList();
+        List<Media> existingMedia = mediaRepository.findByUrls(urls);
+        List<String> notExistingUrls = dtoList.stream()
+                .map(MediaDto::getUrl)
+                .filter(url -> !existingMedia.stream()
+                        .map(Media::getUrl)
+                        .toList().contains(url))
+                .toList();
 
-    @Override
-    @Transactional
-    public MediaResponseDto getById(Long id) throws MediaNotFoundException {
-        Media media = mediaRepository.findById(id);
+        FutureTask<UploadMediaResult> uploadNotExistingUrlsTask =
+                new FutureTask<>(() -> uploadPhotoService.uploadPhotos(notExistingUrls));
 
-        if (media == null) {
-            throw new MediaNotFoundException(id);
+        FutureTask<List<Media>> copyExistingEntities =
+                new FutureTask<>(() -> createMirroredMediaList(dtoList, existingMedia));
+        executorService.submit(uploadNotExistingUrlsTask);
+        executorService.submit(copyExistingEntities);
+
+        UploadMediaResult uploadMediaResult = null;
+        List<Media> mediaList = null;
+
+        try {
+            uploadMediaResult = uploadNotExistingUrlsTask.get();
+            mediaList = copyExistingEntities.get();
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Error creating result media list", e);
         }
-
-        return keyboardMapper.toMediaResponseDto(media);
+        List<Media> resuleMediaList = resultMediaList(dtoList, mediaList, uploadMediaResult);
+        mediaRepository.persist(resuleMediaList);
+        return resuleMediaList;
     }
 
-    @Override
     @Transactional
-    public MediaResponseDto save(MediaDto mediaDto) {
-        String url = mediaDto.url();
-        Media existingMedia = mediaRepository.findByUrl(url);
+    public Media saveMedia(MediaDto mediaDto) {
 
+        Media media = mediaMapper.toEntity(mediaDto);
+
+        Media existingMedia = mediaRepository.findByUrl(media.getUrl());
         if (existingMedia != null) {
-            Media newMedia = new Media();
-            newMedia.setUrl(url);
-            newMedia.setAttachment(existingMedia.getAttachment());
-            newMedia.setOrderIndex(mediaDto.orderIndex());
+            media.setAttachment(existingMedia.getAttachment());
+        } else {
+            UploadMediaResult uploadMediaResult = uploadPhotoService.uploadPhoto(media.getUrl());
+            if (uploadMediaResult.getSuccessUploadedMedia().isEmpty()) {
+                media.setUploadFailReason(uploadMediaResult.getFailedUploadMedia().getFirst().getFailReason());
+            } else {
+                media.setAttachment(uploadMediaResult.getSuccessUploadedMedia().getFirst().getAttachment());
+            }
         }
-        return null;
+
+        ButtonResponse buttonResponse = media.getButtonResponse();
+        int mediaListSize = buttonResponse.getMedia().size();
+        media.setOrderIndex(mediaListSize);
+        media.persistAndFlush();
+        return media;
     }
 
-    @Override
+
     @Transactional
-    public MediaResponseDto update(MediaDto mediaDto) {
-        return null;
+    public Media saveMedia(Media media) throws MediaExistException {
+        boolean mediaWithUrlExist = mediaRepository.findByUrl(media.getUrl()) != null;
+
+        if (mediaWithUrlExist) {
+            throw new MediaExistException(media.getUrl());
+        }
+
+        media.persistAndFlush();
+        return media;
     }
 
-    @Override
-    @Transactional
-    public MediaResponseDto delete(MediaDto mediaDto) {
-        return null;
+    private ButtonResponse createTransientButtonResponse(IdReference idReference) {
+        ButtonResponse buttonResponse = new ButtonResponse();
+        buttonResponse.getMetadata().put("IdReference", idReference.id().toString());
+        buttonResponse.getMetadata().put("isTransientEntity", "true");
+        return buttonResponse;
+    }
+
+    private List<Media> createMirroredMediaList(List<MediaDto> dtoList, List<Media> existingMediaList) {
+        return dtoList.stream()
+                .map(dto -> {
+
+                    Media media = existingMediaList.stream()
+                            .filter(existingMedia -> existingMedia.getUrl().equals(dto.getUrl())).findFirst().get();
+                    Media mirroredMedia = new Media();
+                    mirroredMedia.setUrl(media.getUrl());
+                    mirroredMedia.setAttachment(media.getAttachment());
+                    ButtonResponse buttonResponse = null;
+
+                    if (dto.getButtonResponseIdReference().isBackendId()) {
+                        buttonResponse = buttonResponseRepository.findById(dto.getButtonResponseIdReference().id());
+                    }
+
+                    mirroredMedia.setButtonResponse(buttonResponse);
+                    return mirroredMedia;
+                })
+                .collect(Collectors.toList());
+
+    }
+
+    private List<Media> resultMediaList(List<MediaDto> dtoList, List<Media> existingMediaList, UploadMediaResult uploadMediaResult) {
+        if (existingMediaList == null || uploadMediaResult == null) {
+            return null;
+        }
+        List<Media> resultMediaList = new ArrayList<>();
+        AtomicInteger iterationIndex = new AtomicInteger();
+        dtoList.forEach(dto -> {
+            String currentUrl = dto.getUrl();
+            ButtonResponse buttonResponse = null;
+            if (dto.getButtonResponseIdReference().isBackendId()) {
+                buttonResponse = buttonResponseRepository.findById(dto.getButtonResponseIdReference().id());
+            }
+            Media media = existingMediaList.stream()
+                    .filter(existingMedia -> existingMedia.getUrl().equals(currentUrl))
+                    .findFirst()
+                    .orElse(null);
+            if (media != null) {
+                media.setOrderIndex(iterationIndex.get());
+                resultMediaList.add(media);
+            } else {
+                List<UploadMedia> successUploadMedia = uploadMediaResult.getSuccessUploadedMedia();
+                UploadMedia currentUrlMedia = successUploadMedia.stream()
+                        .filter(uploadMedia -> uploadMedia.getUrl().equals(currentUrl))
+                        .findFirst()
+                        .orElse(null);
+                if (currentUrlMedia != null) {
+                    Media uploadedMedia = new Media();
+                    uploadedMedia.setUrl(currentUrlMedia.getUrl());
+                    uploadedMedia.setAttachment(currentUrlMedia.getAttachment());
+                    uploadedMedia.setButtonResponse(buttonResponse);
+                    uploadedMedia.setOrderIndex(iterationIndex.get());
+                    resultMediaList.add(uploadedMedia);
+                } else {
+                    UploadMedia failUploadMedia = uploadMediaResult.getFailedUploadMedia().stream()
+                            .filter(uploadMedia -> uploadMedia.getUrl().equals(currentUrl))
+                            .findFirst()
+                            .orElseThrow(RuntimeException::new);
+
+                    Media uploadedMedia = new Media();
+                    uploadedMedia.setUrl(failUploadMedia.getUrl());
+                    uploadedMedia.setUploadFailReason(failUploadMedia.getFailReason());
+                    uploadedMedia.setButtonResponse(buttonResponse);
+                    uploadedMedia.setOrderIndex(iterationIndex.get());
+                    resultMediaList.add(uploadedMedia);
+                }
+            }
+            iterationIndex.getAndIncrement();
+        });
+
+        return resultMediaList;
     }
 }

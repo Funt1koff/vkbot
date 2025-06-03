@@ -1,4 +1,4 @@
-package com.funtikov.endpoint.rest;
+package com.funtikov.endpoint.rest.callback;
 
 import com.funtikov.dto.callback.VkCallback;
 import com.funtikov.service.CallbackService;
@@ -9,7 +9,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
 
 @Path("/callback")

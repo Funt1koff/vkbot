@@ -3,10 +3,14 @@ package com.funtikov.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Transient;
+import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 @MappedSuperclass
 public abstract class AuditableEntity extends PanacheEntity {
@@ -18,6 +22,10 @@ public abstract class AuditableEntity extends PanacheEntity {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Transient
+    @Getter
+    private Map<String, String> metadata = new HashMap<>();
 
     public Long getId() {
         return id;

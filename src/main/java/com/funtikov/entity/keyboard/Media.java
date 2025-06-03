@@ -2,6 +2,7 @@ package com.funtikov.entity.keyboard;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.funtikov.dto.media.UploadMediaFailReason;
 import com.funtikov.entity.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -29,5 +30,9 @@ public class Media extends AuditableEntity {
 
     @Column(name = "order_index", nullable = false)
     private Integer orderIndex = 0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "upload_fail_reason")
+    private UploadMediaFailReason uploadFailReason;
 
 }
