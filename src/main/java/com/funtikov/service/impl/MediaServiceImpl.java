@@ -7,6 +7,7 @@ import com.funtikov.dto.media.UploadMediaResult;
 import com.funtikov.entity.keyboard.ButtonResponse;
 import com.funtikov.entity.keyboard.Media;
 import com.funtikov.exception.MediaExistException;
+import com.funtikov.exception.MediaNotFoundException;
 import com.funtikov.mapper.Mapper;
 import com.funtikov.repository.ButtonResponseRepository;
 import com.funtikov.repository.MediaRepository;
@@ -47,6 +48,13 @@ public class MediaServiceImpl implements MediaService {
     }
 
     @Transactional
+    @Override
+    public List<MediaDto> getAllMedia() {
+        return mediaMapper.toDto(mediaRepository.findAll().stream().toList());
+    }
+
+    @Transactional
+    @Override
     public List<Media> saveMediaList(List<MediaDto> dtoList) {
         List<String> urls = dtoList.stream()
                 .map(MediaDto::getUrl)
@@ -82,6 +90,7 @@ public class MediaServiceImpl implements MediaService {
     }
 
     @Transactional
+    @Override
     public Media saveMedia(MediaDto mediaDto) throws MediaExistException {
 
         Media media = mediaMapper.toEntity(mediaDto);
@@ -106,6 +115,7 @@ public class MediaServiceImpl implements MediaService {
 
 
     @Transactional
+    @Override
     public Media saveMedia(Media media) throws MediaExistException {
         boolean mediaWithUrlExist = mediaRepository.findByUrl(media.getUrl()) != null;
 
@@ -115,6 +125,53 @@ public class MediaServiceImpl implements MediaService {
 
         media.persistAndFlush();
         return media;
+    }
+
+    @Transactional
+    @Override
+    public MediaDto updateMedia(MediaDto mediaDto) throws MediaNotFoundException {
+
+        if (!mediaDto.getIdReference().isBackendId()) {
+            throw new MediaNotFoundException(mediaDto.getIdReference().id());
+        }
+
+        Media foundedMedia = mediaRepository.findById(mediaDto.getIdReference().id());
+
+        boolean isNewUrl = !mediaDto.getUrl().equals(foundedMedia.getUrl());
+
+        if (!isNewUrl) {
+            Media mediaWithEqualUrl = mediaRepository.findByUrl(mediaDto.getUrl());
+            if (mediaWithEqualUrl != null) {
+                foundedMedia.setUrl(mediaWithEqualUrl.getUrl());
+                foundedMedia.setAttachment(mediaWithEqualUrl.getAttachment());
+            } else {
+                UploadMediaResult uploadMediaResult = uploadPhotoService.uploadPhoto(mediaDto.getUrl());
+                if (!uploadMediaResult.getSuccessUploadedMedia().isEmpty()) {
+                    UploadMedia uploadMedia = uploadMediaResult.getSuccessUploadedMedia().getFirst();
+                    foundedMedia.setAttachment(uploadMedia.getAttachment());
+                    foundedMedia.setUrl(uploadMedia.getUrl());
+                } else {
+                    UploadMedia failUploadMedia = uploadMediaResult.getFailedUploadMedia().getFirst();
+                    foundedMedia.setUrl(failUploadMedia.getUrl());
+                    foundedMedia.setUploadFailReason(failUploadMedia.getFailReason());
+                }
+            }
+        }
+        if (foundedMedia.getButtonResponse() != null) {
+            foundedMedia.setOrderIndex(mediaDto.getOrderIndex());
+        }
+
+        foundedMedia.persistAndFlush();
+        return mediaMapper.toDto(foundedMedia);
+    }
+
+    @Override
+    @Transactional
+    public void deleteMedia(Long id) throws MediaNotFoundException {
+        if (mediaRepository.findById(id) == null) {
+            throw new MediaNotFoundException(id);
+        }
+        mediaRepository.deleteById(id);
     }
 
     private ButtonResponse createTransientButtonResponse(IdReference idReference) {

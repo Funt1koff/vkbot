@@ -19,6 +19,8 @@ public class MediaDto {
     @NotNull(message = "Media url must be null")
     private String url;
 
+    private Integer orderIndex;
+
     @Override
     public String toString() {
         return new Gson().toJson(this);
